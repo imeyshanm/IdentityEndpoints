@@ -5,7 +5,7 @@ using IdentityEndpoints.Models;
 
 namespace IdentityEndpoints.DbContext
 {
-    public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser>(options)
+    public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
     {
         
     }

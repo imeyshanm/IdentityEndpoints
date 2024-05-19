@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace IdentityEndpoints.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240518125706_IdentityEndpointsDB")]
-    partial class IdentityEndpointsDB
+    [Migration("20240518152514_TwoFactorEnabled")]
+    partial class TwoFactorEnabled
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,7 +25,7 @@ namespace IdentityEndpoints.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("IdentityEndpoints.Models.AppUser", b =>
+            modelBuilder.Entity("IdentityEndpoints.Models.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -49,6 +49,9 @@ namespace IdentityEndpoints.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -234,7 +237,7 @@ namespace IdentityEndpoints.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("IdentityEndpoints.Models.AppUser", null)
+                    b.HasOne("IdentityEndpoints.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -243,7 +246,7 @@ namespace IdentityEndpoints.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("IdentityEndpoints.Models.AppUser", null)
+                    b.HasOne("IdentityEndpoints.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -258,7 +261,7 @@ namespace IdentityEndpoints.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IdentityEndpoints.Models.AppUser", null)
+                    b.HasOne("IdentityEndpoints.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -267,7 +270,7 @@ namespace IdentityEndpoints.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("IdentityEndpoints.Models.AppUser", null)
+                    b.HasOne("IdentityEndpoints.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)

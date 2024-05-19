@@ -3,8 +3,9 @@ using System.Security.Principal;
 
 namespace IdentityEndpoints.Models
 {
-    public class AppUser : IdentityUser
+    public class ApplicationUser : IdentityUser
     {
+        public string? Name { get; set; }
 
     }
 }

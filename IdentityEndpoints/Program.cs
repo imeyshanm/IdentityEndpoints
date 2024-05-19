@@ -1,5 +1,6 @@
 using IdentityEndpoints.DbContext;
 using IdentityEndpoints.Models;
+using IdentityEndpoints.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using SharedClassLibrary.Contracts;
+using SharedClassLibrary.GenericModels;
+using SharedClassLibrary.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,15 +25,22 @@ builder.Services.AddSwaggerGen();
 
 // Strating ---------
 // For Entity Framework
-builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(configuration.GetConnectionString("AppDB") ?? throw new InvalidOperationException("Connection String Not Found")));
+builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(configuration.GetConnectionString("AppDB") ?? throw new InvalidOperationException("Connection String Not Found")));
 
 
 //Add JWT Authentication
 //Identity
-builder.Services.AddIdentity<AppUser, IdentityRole>()
-    .AddEntityFrameworkStores<AppDbContext>()
-   .AddSignInManager()
-   .AddRoles<IdentityRole>();
+//builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+//    .AddEntityFrameworkStores<ApplicationDbContext>()
+//   .AddSignInManager()
+//   .AddRoles<IdentityRole>();
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+        .AddEntityFrameworkStores<ApplicationDbContext>()
+        .AddDefaultTokenProviders()
+        .AddSignInManager()
+       .AddRoles<IdentityRole>();
+
 
 //JWT
 builder.Services.AddAuthentication(options =>
@@ -54,9 +65,12 @@ builder.Services.AddAuthentication(options =>
 
         ValidAudience = configuration["JWT:ValidAudience"],
         ValidIssuer = configuration["JWT:ValidIssuer"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Key"]!))
     };
 });
+
+//Add Authentication to Swagger UI
+
 builder.Services.AddSwaggerGen(option =>
 {
     //option.SwaggerDoc("v1", new OpenApiInfo { Title = "Demo API", Version = "v1" });
@@ -85,14 +99,20 @@ builder.Services.AddSwaggerGen(option =>
     //});
 });
 
-//Add Authentication to Swagger UI
+builder.Services.AddScoped<IUserAccount, AccountRepository>();
 
+
+//Add Email Configs
+var emailConfig = configuration.GetSection("EmailConfiguration").Get<EmailConfiguration>();
+builder.Services.AddSingleton(emailConfig!);
+
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 
 //Endind-------
 var app = builder.Build();
 
-app.MapIdentityApi<AppUser>();
+//app.MapIdentityApi<AppUser>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
