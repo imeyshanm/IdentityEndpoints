@@ -3,8 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdentityEndpoints.Controllers
 {
-    [ApiController]
+    ////////[ApiController]
+    ////////[Route("api/[controller]")]
+    //////[Authorize]
+    [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
+    [ApiController]
     public class WeatherForecastController : ControllerBase
     {
         private static readonly string[] Summaries = new[]
@@ -20,7 +24,7 @@ namespace IdentityEndpoints.Controllers
         }
 
         [HttpGet("admin")]
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         public IEnumerable<WeatherForecast> GetForecastByAdmin()
         {
             return Enumerable.Range(1, 10).Select(index => new WeatherForecast
