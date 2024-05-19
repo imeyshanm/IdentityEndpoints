@@ -85,12 +85,12 @@ namespace IdentityEndpoints.Repositories
             return new LoginResponse(true, token!, "Login completed");
         }
 
-        public async Task<LoginResponse> LoginAccountOTP(string code, string Email)
+        public async Task<LoginResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO)
         {
-            var SignIn = await signInManager.TwoFactorSignInAsync("Email", code, false, false);
+            var SignIn = await signInManager.TwoFactorSignInAsync("Email", loginOTPDTO.Code, false, false);
             if (SignIn.Succeeded)
             {
-                var getUser = await userManager.FindByEmailAsync(Email);
+                var getUser = await userManager.FindByEmailAsync(loginOTPDTO.Email);
                 if (getUser is null)
                     return new LoginResponse(false, null!, "User not found");
 

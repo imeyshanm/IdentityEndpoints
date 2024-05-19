@@ -13,7 +13,7 @@ namespace SharedClassLibrary.Contracts
         Task<GeneralResponse> CreateAccount(UserDTO userDTO);
         Task<LoginResponse> LoginAccount(LoginDTO loginDTO);
 
-        Task<LoginResponse> LoginAccountOTP(string code, string Email);
+        Task<LoginResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO);
 
     }
 }

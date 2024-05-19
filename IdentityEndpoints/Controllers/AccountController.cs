@@ -24,9 +24,9 @@ namespace IdentityEndpoints.Controllers
         }
 
         [HttpPost("login-2FA")]
-        public async Task<IActionResult> LoginAccountOTP(string code, string Email)
+        public async Task<IActionResult> LoginAccountOTP(LoginOTPDTO loginOTPDTO)
         {
-            var response = await userAccount.LoginAccountOTP(code, Email);
+            var response = await userAccount.LoginAccountOTP(loginOTPDTO);
             return Ok(response);
         }
     }
