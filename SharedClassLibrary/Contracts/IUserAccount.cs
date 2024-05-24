@@ -11,9 +11,9 @@ namespace SharedClassLibrary.Contracts
     public interface IUserAccount
     {
         Task<GeneralResponse> CreateAccount(UserDTO userDTO);
-        Task<LoginResponse> LoginAccount(LoginDTO loginDTO);
+        Task<TokenResponse> LoginAccount(LoginDTO loginDTO);
 
-        Task<LoginResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO);
+        Task<TokenResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO);
         Task<TokenResponse> RefreshToken(TokenDTO tokenDTO);
 
 

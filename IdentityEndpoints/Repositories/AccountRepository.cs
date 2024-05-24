@@ -59,34 +59,34 @@ namespace IdentityEndpoints.Repositories
             }
         }
 
-        public async Task<ServiceResponses.LoginResponse> LoginAccount(LoginDTO loginDTO)
+        public async Task<ServiceResponses.TokenResponse> LoginAccount(LoginDTO loginDTO)
         {
             if (loginDTO == null)
-                return new LoginResponse(false, null!, "Login container is empty");
+                return new TokenResponse(false, null!,null!, "Login container is empty");
 
             var getUser = await userManager.FindByEmailAsync(loginDTO.Email);
             if (getUser is null)
-                return new LoginResponse(false, null!, "User not found");
+                return new TokenResponse(false, null!, null!, "User not found");
 
             bool checkUserPasswords = await userManager.CheckPasswordAsync(getUser, loginDTO.Password);
             if (!checkUserPasswords)
-                return new LoginResponse(false, null!, "Invalid email/password");
+                return new TokenResponse(false, null!, null!, "Invalid email/password");
 
             var getUserRole = await userManager.GetRolesAsync(getUser);
             var userSession = new UserSession(getUser.Id, getUser.Name, getUser.Email, getUserRole.First());
             string token = GenerateToken(userSession);
 
-            //////var refreshToken = GenerateRefreshToken();
+            var refreshToken = GenerateRefreshToken();
 
-            //////_ = int.TryParse(config["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
-            //////_ = int.TryParse(config["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
+            _ = int.TryParse(config["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
+            _ = int.TryParse(config["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
 
-            //////getUser.RefreshToken = refreshToken;
-            //////getUser.TokenType = "Bearer";
-            //////getUser.AccessTokenExpiryTime = DateTime.Now.AddMinutes(tokenValidityInMinutes);
-            //////getUser.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
-
-            //////await userManager.UpdateAsync(getUser);
+            getUser.RefreshToken = refreshToken;
+            getUser.TokenType = "Bearer";
+            getUser.AccessTokenExpiryTime = DateTime.Now.AddMinutes(tokenValidityInMinutes);
+            getUser.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
+            getUser.AccessToken = token;
+            await userManager.UpdateAsync(getUser);
 
 
             if (getUser.TwoFactorEnabled)
@@ -97,13 +97,13 @@ namespace IdentityEndpoints.Repositories
 
                 var message = new Message(new string[] { getUser.Email! }, "OTP Confrimation", token);
                 _emailService.SendEmail(message);
-                return new LoginResponse(false, null!, $"We have sent an OTO to your Email {getUser.Email} ");
+                return new TokenResponse(false, null!,null!, $"We have sent an OTO to your Email {getUser.Email} ");
             }
 
-            return new LoginResponse(true, token!, "Login completed");
+            return new TokenResponse(true, token!, refreshToken, "Login completed");
         }
 
-        public async Task<LoginResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO)
+        public async Task<TokenResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO)
         {
             //var SignIn = await signInManager.TwoFactorSignInAsync("Email", loginOTPDTO.Code, false, false);
             var SignIn = await signInManager.TwoFactorSignInAsync(TokenOptions.DefaultEmailProvider, loginOTPDTO.Code, true, false);
@@ -112,7 +112,7 @@ namespace IdentityEndpoints.Repositories
             {
                 var getUser = await userManager.FindByEmailAsync(loginOTPDTO.Email);
                 if (getUser is null)
-                    return new LoginResponse(false, null!, "User not found");
+                    return new TokenResponse(false, null!, "User not found");
 
 
                 var getUserRole = await userManager.GetRolesAsync(getUser);
@@ -128,14 +128,15 @@ namespace IdentityEndpoints.Repositories
                 getUser.TokenType = "Bearer";
                 getUser.AccessTokenExpiryTime = DateTime.Now.AddMinutes(tokenValidityInMinutes);
                 getUser.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
+                getUser.AccessToken = token;
 
                 await userManager.UpdateAsync(getUser);
 
-                return new LoginResponse(true, token!, "Login completed");
+                return new TokenResponse(true, token!,refreshToken!, "Login completed");
             }
             else
             {
-                return new LoginResponse(false, null!, "Invalid Code");
+                return new TokenResponse(false, null!,null!, "Invalid Code");
 
             }
         }
