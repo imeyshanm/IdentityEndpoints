@@ -114,25 +114,24 @@ namespace IdentityEndpoints.Repositories
                 if (getUser is null)
                     return new TokenResponse(false, null!, "User not found");
 
+                //var getUserRole = await userManager.GetRolesAsync(getUser);
+                //var userSession = new UserSession(getUser.Id, getUser.Name, getUser.Email, getUserRole.First());
+                //string token = GenerateToken(userSession);
 
-                var getUserRole = await userManager.GetRolesAsync(getUser);
-                var userSession = new UserSession(getUser.Id, getUser.Name, getUser.Email, getUserRole.First());
-                string token = GenerateToken(userSession);
+                //var refreshToken = GenerateRefreshToken();
 
-                var refreshToken = GenerateRefreshToken();
+                //_ = int.TryParse(config["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
+                //_ = int.TryParse(config["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
 
-                _ = int.TryParse(config["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
-                _ = int.TryParse(config["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
+                //getUser.RefreshToken = refreshToken;
+                //getUser.TokenType = "Bearer";
+                //getUser.AccessTokenExpiryTime = DateTime.Now.AddMinutes(tokenValidityInMinutes);
+                //getUser.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
+                //getUser.AccessToken = token;
 
-                getUser.RefreshToken = refreshToken;
-                getUser.TokenType = "Bearer";
-                getUser.AccessTokenExpiryTime = DateTime.Now.AddMinutes(tokenValidityInMinutes);
-                getUser.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
-                getUser.AccessToken = token;
+                //await userManager.UpdateAsync(getUser);
 
-                await userManager.UpdateAsync(getUser);
-
-                return new TokenResponse(true, token!,refreshToken!, "Login completed");
+                return new TokenResponse(true, getUser.AccessToken!, getUser.RefreshToken!, "Login completed");
             }
             else
             {
@@ -145,7 +144,7 @@ namespace IdentityEndpoints.Repositories
         {
             if (tokenDTO is null)
             {
-                return new TokenResponse(false, "Invalid client request", "Invalid");
+                return new TokenResponse(false, null!, null!, "Invalid Invalid client request");
             }
 
             string? accessToken = tokenDTO.AccessToken;
@@ -154,7 +153,7 @@ namespace IdentityEndpoints.Repositories
             var principal = GetPrincipalFromExpiredToken(accessToken);
             if (principal == null)
             {
-                return new TokenResponse(false, "Invalid access token or refresh token", "Invalid");
+                return new TokenResponse(false, null!, null!, "Invalid access token or refresh token");
             }
 
 #pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
@@ -167,16 +166,16 @@ namespace IdentityEndpoints.Repositories
 
             if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
             {
-                return new TokenResponse(false, "Invalid access token or refresh token", "Invalid");
+                return new TokenResponse(false,null!,null!, "Invalid access token or refresh token");
             }
 
             var getUserRole = await userManager.GetRolesAsync(user);
             var userSession = new UserSession(user.Id, user.Name, user.Email, getUserRole.First());
 
             var newAccessToken = GenerateToken(userSession);
-            var newRefreshToken = GenerateRefreshToken();
+            var newRefreshToken = user.RefreshToken;
 
-            user.RefreshToken = newRefreshToken;
+            user.AccessToken = newAccessToken;
             await userManager.UpdateAsync(user);
 
             return new TokenResponse(true,accessToken = newAccessToken!,refreshToken = newRefreshToken!);
