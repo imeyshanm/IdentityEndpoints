@@ -14,6 +14,8 @@ namespace SharedClassLibrary.Contracts
         Task<LoginResponse> LoginAccount(LoginDTO loginDTO);
 
         Task<LoginResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO);
+        Task<TokenResponse> RefreshToken(TokenDTO tokenDTO);
+
 
     }
 }

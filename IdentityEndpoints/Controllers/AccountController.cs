@@ -29,5 +29,12 @@ namespace IdentityEndpoints.Controllers
             var response = await userAccount.LoginAccountOTP(loginOTPDTO);
             return Ok(response);
         }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(TokenDTO loginOTPDTO)
+        {
+            var response = await userAccount.RefreshToken(loginOTPDTO);
+            return Ok(response);
+        }
     }
 }

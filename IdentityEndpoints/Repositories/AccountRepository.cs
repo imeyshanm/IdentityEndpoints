@@ -1,5 +1,6 @@
 ﻿using IdentityEndpoints.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using SharedClassLibrary.Contracts;
 using SharedClassLibrary.DTOs;
@@ -7,6 +8,7 @@ using SharedClassLibrary.GenericModels;
 using SharedClassLibrary.Services;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using static SharedClassLibrary.DTOs.ServiceResponses;
 
@@ -29,6 +31,7 @@ namespace IdentityEndpoints.Repositories
                 PasswordHash = userDTO.Password,
                 UserName = userDTO.Email,
                 TwoFactorEnabled = userDTO.TwoFactorEnabled,
+                EmailConfirmed = true
 
             };
             var user = await userManager.FindByEmailAsync(newUser.Email);
@@ -72,11 +75,26 @@ namespace IdentityEndpoints.Repositories
             var getUserRole = await userManager.GetRolesAsync(getUser);
             var userSession = new UserSession(getUser.Id, getUser.Name, getUser.Email, getUserRole.First());
             string token = GenerateToken(userSession);
+
+            //////var refreshToken = GenerateRefreshToken();
+
+            //////_ = int.TryParse(config["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
+            //////_ = int.TryParse(config["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
+
+            //////getUser.RefreshToken = refreshToken;
+            //////getUser.TokenType = "Bearer";
+            //////getUser.AccessTokenExpiryTime = DateTime.Now.AddMinutes(tokenValidityInMinutes);
+            //////getUser.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
+
+            //////await userManager.UpdateAsync(getUser);
+
+
             if (getUser.TwoFactorEnabled)
             {
                 await signInManager.SignOutAsync();
-                await signInManager.PasswordSignInAsync(getUser, loginDTO.Password, false, false);
-                token = await userManager.GenerateTwoFactorTokenAsync(getUser, "Email");
+                await signInManager.PasswordSignInAsync(getUser, loginDTO.Password, true, false);
+                token = await userManager.GenerateTwoFactorTokenAsync(getUser, TokenOptions.DefaultEmailProvider);
+
                 var message = new Message(new string[] { getUser.Email! }, "OTP Confrimation", token);
                 _emailService.SendEmail(message);
                 return new LoginResponse(false, null!, $"We have sent an OTO to your Email {getUser.Email} ");
@@ -87,20 +105,32 @@ namespace IdentityEndpoints.Repositories
 
         public async Task<LoginResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO)
         {
-            var SignIn = await signInManager.TwoFactorSignInAsync("Email", loginOTPDTO.Code, false, false);
+            //var SignIn = await signInManager.TwoFactorSignInAsync("Email", loginOTPDTO.Code, false, false);
+            var SignIn = await signInManager.TwoFactorSignInAsync(TokenOptions.DefaultEmailProvider, loginOTPDTO.Code, true, false);
+
             if (SignIn.Succeeded)
             {
                 var getUser = await userManager.FindByEmailAsync(loginOTPDTO.Email);
                 if (getUser is null)
                     return new LoginResponse(false, null!, "User not found");
 
-                //bool checkUserPasswords = await userManager.CheckPasswordAsync(getUser, getUser.p);
-                //if (!checkUserPasswords)
-                //    return new LoginResponse(false, null!, "Invalid email/password");
 
                 var getUserRole = await userManager.GetRolesAsync(getUser);
                 var userSession = new UserSession(getUser.Id, getUser.Name, getUser.Email, getUserRole.First());
                 string token = GenerateToken(userSession);
+
+                var refreshToken = GenerateRefreshToken();
+
+                _ = int.TryParse(config["JWT:RefreshTokenValidityInDays"], out int refreshTokenValidityInDays);
+                _ = int.TryParse(config["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
+
+                getUser.RefreshToken = refreshToken;
+                getUser.TokenType = "Bearer";
+                getUser.AccessTokenExpiryTime = DateTime.Now.AddMinutes(tokenValidityInMinutes);
+                getUser.RefreshTokenExpiryTime = DateTime.Now.AddDays(refreshTokenValidityInDays);
+
+                await userManager.UpdateAsync(getUser);
+
                 return new LoginResponse(true, token!, "Login completed");
             }
             else
@@ -110,16 +140,58 @@ namespace IdentityEndpoints.Repositories
             }
         }
 
+        public async Task<ServiceResponses.TokenResponse> RefreshToken(TokenDTO tokenDTO)
+        {
+            if (tokenDTO is null)
+            {
+                return new TokenResponse(false, "Invalid client request", "Invalid");
+            }
+
+            string? accessToken = tokenDTO.AccessToken;
+            string? refreshToken = tokenDTO.RefreshToken;
+
+            var principal = GetPrincipalFromExpiredToken(accessToken);
+            if (principal == null)
+            {
+                return new TokenResponse(false, "Invalid access token or refresh token", "Invalid");
+            }
+
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+            string username = principal.Identity.Name;
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+
+            var user = await userManager.FindByEmailAsync(username!);
+
+            if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+            {
+                return new TokenResponse(false, "Invalid access token or refresh token", "Invalid");
+            }
+
+            var getUserRole = await userManager.GetRolesAsync(user);
+            var userSession = new UserSession(user.Id, user.Name, user.Email, getUserRole.First());
+
+            var newAccessToken = GenerateToken(userSession);
+            var newRefreshToken = GenerateRefreshToken();
+
+            user.RefreshToken = newRefreshToken;
+            await userManager.UpdateAsync(user);
+
+            return new TokenResponse(true,accessToken = newAccessToken!,refreshToken = newRefreshToken!);
+
+        }
+
         private string GenerateToken(UserSession user)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JWT:Key"]!));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
             var userClaims = new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.Name),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(ClaimTypes.NameIdentifier, user.Id!),
+                new Claim(ClaimTypes.Name, user.Name!),
+                new Claim(ClaimTypes.Email, user.Email!),
+                new Claim(ClaimTypes.Role, user.Role!)
             };
             _ = int.TryParse(config["JWT:TokenValidityInMinutes"], out int tokenValidityInMinutes);
 
@@ -131,6 +203,36 @@ namespace IdentityEndpoints.Repositories
                 signingCredentials: credentials
                 );
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private ClaimsPrincipal? GetPrincipalFromExpiredToken(string? token)
+        {
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JWT:Key"]!));
+
+            var tokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateAudience = false,
+                ValidateIssuer = false,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = securityKey,
+                ValidateLifetime = false
+            };
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
+            if (securityToken is not JwtSecurityToken jwtSecurityToken || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+                throw new SecurityTokenException("Invalid token");
+
+            return principal;
+
+        }
+
+        private static string GenerateRefreshToken()
+        {
+            var randomNumber = new byte[64];
+            using var rng = RandomNumberGenerator.Create();
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
         }
     }
 }
