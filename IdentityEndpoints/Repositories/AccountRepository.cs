@@ -38,7 +38,7 @@ namespace IdentityEndpoints.Repositories
             if (user is not null) return new GeneralResponse(false, "User registered already");
 
             var createUser = await userManager.CreateAsync(newUser!, userDTO.Password);
-            if (!createUser.Succeeded) return new GeneralResponse(false, "Error occured.. please try again");
+            if (!createUser.Succeeded) return new GeneralResponse(false, $"Error occured {createUser} . please try again " );
 
             //Assign Default Role : Admin to first registrar; rest is user
             var checkAdmin = await roleManager.FindByNameAsync("Admin");
@@ -93,6 +93,12 @@ namespace IdentityEndpoints.Repositories
             {
                 await signInManager.SignOutAsync();
                 await signInManager.PasswordSignInAsync(getUser, loginDTO.Password, true, false);
+                var result = await signInManager.PasswordSignInAsync(getUser, loginDTO.Password, false, lockoutOnFailure: false);
+                if (result.Succeeded)
+                {
+
+                }
+
                 token = await userManager.GenerateTwoFactorTokenAsync(getUser, TokenOptions.DefaultEmailProvider);
 
                 var message = new Message(new string[] { getUser.Email! }, "OTP Confrimation", token);
@@ -106,7 +112,7 @@ namespace IdentityEndpoints.Repositories
         public async Task<TokenResponse> LoginAccountOTP(LoginOTPDTO loginOTPDTO)
         {
             //var SignIn = await signInManager.TwoFactorSignInAsync("Email", loginOTPDTO.Code, false, false);
-            var SignIn = await signInManager.TwoFactorSignInAsync(TokenOptions.DefaultEmailProvider, loginOTPDTO.Code, true, false);
+            var SignIn = await signInManager.TwoFactorSignInAsync(TokenOptions.DefaultEmailProvider, loginOTPDTO.Code, false, false);
 
             if (SignIn.Succeeded)
             {
@@ -139,6 +145,8 @@ namespace IdentityEndpoints.Repositories
 
             }
         }
+
+
 
         public async Task<ServiceResponses.TokenResponse> RefreshToken(TokenDTO tokenDTO)
         {
@@ -233,6 +241,11 @@ namespace IdentityEndpoints.Repositories
             using var rng = RandomNumberGenerator.Create();
             rng.GetBytes(randomNumber);
             return Convert.ToBase64String(randomNumber);
+        }
+
+        public Task<GeneralResponse> ConfirmEmail(UserDTO userDTO)
+        {
+            throw new NotImplementedException();
         }
     }
 }
