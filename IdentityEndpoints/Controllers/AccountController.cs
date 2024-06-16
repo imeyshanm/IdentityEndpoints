@@ -36,5 +36,12 @@ namespace IdentityEndpoints.Controllers
             var response = await userAccount.RefreshToken(loginOTPDTO);
             return Ok(response);
         }
+
+        [HttpPost("confirm")]
+        public async Task<IActionResult> ConfirmEmail(ConfirmEmailDTO confirmEmailDTO)
+        {
+            var response = await userAccount.ConfirmEmail(confirmEmailDTO);
+            return Ok(response);
+        }
     }
 }

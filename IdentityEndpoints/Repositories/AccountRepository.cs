@@ -243,9 +243,27 @@ namespace IdentityEndpoints.Repositories
             return Convert.ToBase64String(randomNumber);
         }
 
-        public Task<GeneralResponse> ConfirmEmail(UserDTO userDTO)
+        public async Task<GeneralResponse> ConfirmEmail(ConfirmEmailDTO  confirmEmailDTO)
         {
-            throw new NotImplementedException();
+            if (confirmEmailDTO is null)
+            {
+                return new GeneralResponse(false, "Invalid Invalid client request");
+            }
+
+            if (confirmEmailDTO.Token == null || confirmEmailDTO.Email == null)
+            {
+                return new GeneralResponse(false, "Invalid");
+            }
+
+            var user = await userManager.FindByEmailAsync(confirmEmailDTO.Email);
+            if (user == null)
+            {
+                return new GeneralResponse(false, "Invalid User"); 
+            }
+
+            var result = await userManager.ConfirmEmailAsync(user, confirmEmailDTO.Token);
+
+            return  (result.Succeeded ?  new GeneralResponse(true, "ConfirmEmail")   : new GeneralResponse(true, "Error") );
         }
     }
 }

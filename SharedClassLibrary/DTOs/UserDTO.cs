@@ -29,5 +29,7 @@ namespace SharedClassLibrary.DTOs
 
         [Required]
         public bool TwoFactorEnabled { get; set; } = false;
+
+
     }
 }
